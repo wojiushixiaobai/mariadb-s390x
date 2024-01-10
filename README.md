@@ -1,6 +1,52 @@
 Code status:
 ------------
 
+[![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=for-the-badge)](https://cloudsmith.com)
+
+Package repository hosting is graciously provided by  [Cloudsmith](https://cloudsmith.com).
+Cloudsmith is the only fully hosted, cloud-native, universal package management solution, that
+enables your organization to create, store and share packages in any format, to any place, with total
+confidence.
+
+## Debian Repository
+
+- [x] linux/s390x
+
+### Debian bullseye (11)
+
+```sh
+# MariaDB 10.6.16
+wget -qO - https://dl.cloudsmith.io/public/jumpserver/mariadb-10-6-16/gpg.B47668A04ABEE742.key | gpg --dearmor > /etc/apt/trusted.gpg.d/jumpserver-mariadb.gpg
+
+# Debian bullseye(11)
+echo "deb [arch=s390x] https://dl.cloudsmith.io/public/jumpserver/mariadb-10-6-16/deb/debian bullseye main" > /etc/apt/sources.list.d/jumpserver-mariadb.list
+```
+
+```sh
+# MariaDB 10.11.6
+wget -qO - https://dl.cloudsmith.io/public/jumpserver/mariadb-10-11-6/gpg.714A71B00036D18E.key | gpg --dearmor > /etc/apt/trusted.gpg.d/jumpserver-mariadb.gpg
+
+# Debian bullseye(11)
+echo "deb [arch=s390x] https://dl.cloudsmith.io/public/jumpserver/mariadb-10-11-6/deb/debian bullseye main" > /etc/apt/sources.list.d/jumpserver-mariadb.list
+```
+
+### Debian bookworm (12)
+```sh
+# MariaDB 10.6.16
+wget -qO - https://dl.cloudsmith.io/public/jumpserver/mariadb-10-6-16/gpg.B47668A04ABEE742.key | gpg --dearmor > /etc/apt/trusted.gpg.d/jumpserver-mariadb.gpg
+
+# Debian bookworm(12)
+echo "deb [arch=s390x] https://dl.cloudsmith.io/public/jumpserver/mariadb-10-6-16/deb/debian bookworm main" > /etc/apt/sources.list.d/jumpserver-mariadb.list
+```
+
+```sh
+# MariaDB 10.11.6
+wget -qO - https://dl.cloudsmith.io/public/jumpserver/mariadb-10-11-6/gpg.714A71B00036D18E.key | gpg --dearmor > /etc/apt/trusted.gpg.d/jumpserver-mariadb.gpg
+
+# Debian bookworm(12)
+echo "deb [arch=s390x] https://dl.cloudsmith.io/public/jumpserver/mariadb-10-11-6/deb/debian bookworm main" > /etc/apt/sources.list.d/jumpserver-mariadb.list
+```
+
 * [![Appveyor CI status](https://ci.appveyor.com/api/projects/status/4u6pexmtpuf8jq66?svg=true)](https://ci.appveyor.com/project/rasmushoj/server) ci.appveyor.com
 
 ## MariaDB: The open source relational database 
