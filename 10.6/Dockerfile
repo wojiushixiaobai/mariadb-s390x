@@ -17,7 +17,7 @@ RUN set -ex \
 
 FROM builder as build-galera
 ARG TARGETARCH
-ARG VERSION=10.6.16
+ARG VERSION=10.6.17
 
 WORKDIR /opt/galera
 
@@ -48,7 +48,7 @@ RUN set -ex \
 
 FROM builder as build-mariadb
 ARG TARGETARCH
-ARG VERSION=10.6.16
+ARG VERSION=10.6.17
 
 WORKDIR /opt/mariadb
 
