@@ -1,0 +1,184 @@
+{
+  "11.4": {
+    "milestone": "11.4",
+    "version": "11.4.3",
+    "fullVersion": "1:11.4.3+maria~ubu2404",
+    "releaseStatus": "Stable",
+    "supportType": "Long Term Support",
+    "base": "ubuntu:noble",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "11.4-ubi": {
+    "milestone": "11.4",
+    "version": "11.4.3",
+    "fullVersion": "11.4.3",
+    "releaseStatus": "Stable",
+    "supportType": "Long Term Support",
+    "base": "ubi9",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "11.2": {
+    "milestone": "11.2",
+    "version": "11.2.5",
+    "fullVersion": "1:11.2.5+maria~ubu2204",
+    "releaseStatus": "Stable",
+    "supportType": "Short Term Support",
+    "base": "ubuntu:jammy",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "11.1": {
+    "milestone": "11.1",
+    "version": "11.1.6",
+    "fullVersion": "1:11.1.6+maria~ubu2204",
+    "releaseStatus": "Stable",
+    "supportType": "Short Term Support",
+    "base": "ubuntu:jammy",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "10.11": {
+    "milestone": "10.11",
+    "version": "10.11.9",
+    "fullVersion": "1:10.11.9+maria~ubu2204",
+    "releaseStatus": "Stable",
+    "supportType": "Long Term Support",
+    "base": "ubuntu:jammy",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "10.11-ubi": {
+    "milestone": "10.11",
+    "version": "10.11.9",
+    "fullVersion": "10.11.9",
+    "releaseStatus": "Stable",
+    "supportType": "Long Term Support",
+    "base": "ubi9",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "10.6": {
+    "milestone": "10.6",
+    "version": "10.6.19",
+    "fullVersion": "1:10.6.19+maria~ubu2004",
+    "releaseStatus": "Stable",
+    "supportType": "Long Term Support",
+    "base": "ubuntu:focal",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "10.6-ubi": {
+    "milestone": "10.6",
+    "version": "10.6.19",
+    "fullVersion": "10.6.19",
+    "releaseStatus": "Stable",
+    "supportType": "Long Term Support",
+    "base": "ubi9",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "10.5": {
+    "milestone": "10.5",
+    "version": "10.5.26",
+    "fullVersion": "1:10.5.26+maria~ubu2004",
+    "releaseStatus": "Stable",
+    "supportType": "Long Term Support",
+    "base": "ubuntu:focal",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "11.5": {
+    "milestone": "11.5",
+    "version": "11.5.2",
+    "fullVersion": "1:11.5.2+maria~ubu2404",
+    "releaseStatus": "Stable",
+    "supportType": "Short Term Support",
+    "base": "ubuntu:noble",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "11.5-ubi": {
+    "milestone": "11.5",
+    "version": "11.5.2",
+    "fullVersion": "11.5.2",
+    "releaseStatus": "Stable",
+    "supportType": "Short Term Support",
+    "base": "ubi9",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "11.6": {
+    "milestone": "11.6",
+    "version": "11.6.1",
+    "fullVersion": "1:11.6.1+maria~ubu2404",
+    "releaseStatus": "RC",
+    "supportType": "Short Term Support",
+    "base": "ubuntu:noble",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  },
+  "11.6-ubi": {
+    "milestone": "11.6",
+    "version": "11.6.1",
+    "fullVersion": "11.6.1",
+    "releaseStatus": "RC",
+    "supportType": "Short Term Support",
+    "base": "ubi9",
+    "arches": [
+      "amd64",
+      "arm64v8",
+      "ppc64le",
+      "s390x"
+    ]
+  }
+}
