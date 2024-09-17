@@ -1,0 +1,91 @@
+name: build
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        DISTRO: [ 'debian' ]
+        SUITE: [ 'bookworm', 'trixie' ]
+        VERSION: [ '10.6', '10.11', '11.5' ]
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: false
+          swap-storage: false
+
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Check Version
+        run: |
+          echo "Checking version..."
+          wget https://github.com/MariaDB/mariadb-docker/raw/master/versions.json
+          VERSION=$(jq -r '."${{ matrix.VERSION }}".version' versions.json)
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Current version: ${VERSION}"
+
+      - name: Check Release
+        run: |
+          gh release view ${{ env.VERSION }} -R ${{ github.repository }} >/dev/null 2>&1 || echo "create=1" >> $GITHUB_ENV
+          case ${{ matrix.SUITE }} in
+            bookworm)
+              gh release view ${{ env.VERSION }} -R ${{ github.repository }} | grep mariadb-server_.*+maria.deb12_s390x.deb >/dev/null 2>&1 || echo "build=1" >> $GITHUB_ENV
+              ;;
+            trixie)
+              gh release view ${{ env.VERSION }} -R ${{ github.repository }} | grep mariadb-server_.*.deb13_s390x.deb >/dev/null 2>&1 || echo "build=1" >> $GITHUB_ENV
+              ;;
+            *)
+              gh release view ${{ env.VERSION }} -R ${{ github.repository }} | grep mariadb-server_.*.deb >/dev/null 2>&1 || echo "build=1" >> $GITHUB_ENV
+              exit 1
+              ;;
+          esac
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Image
+        if: env.build == '1'
+        run: |
+          docker buildx build --platform linux/s390x --build-arg DISTRO=${{ matrix.DISTRO }} --build-arg SUITE=${{ matrix.SUITE }} --build-arg VERSION=${{ env.VERSION }} -t mariadb:${{ env.VERSION }} -f ${{ matrix.DISTRO }}/Dockerfile . --load
+
+      - name: Create Tag
+        if: env.create == '1'
+        run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          echo $(date "+%Y%m%d") > serial
+          git add .
+          git commit -m "Release ${{ env.VERSION }}" || true
+          git tag ${{ env.VERSION }}
+          git push origin ${{ env.VERSION }}  || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        if: env.create == '1'
+        run: |
+          gh release create ${{ env.VERSION }} -R ${{ github.repository }} --title ${{ env.VERSION }} || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upgrade Release
+        if: env.build == '1'
+        run: |
+          docker run --rm -v $(pwd)/dist:/dist mariadb:${{ env.VERSION }}
+          ls -al dist
+          gh release upload ${{ env.VERSION }} -R ${{ github.repository }} dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

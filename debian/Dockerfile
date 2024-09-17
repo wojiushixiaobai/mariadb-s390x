@@ -1,4 +1,8 @@
-FROM debian:bookworm-slim as builder
+ARG DISTRO=debian
+ARG SUITE=bookworm
+ARG BASE_IMAGE=${DISTRO}:${SUITE}-slim
+
+FROM ${BASE_IMAGE} AS builder
 ARG TARGETARCH
 
 ARG BUILD_DEPENDENCIES="           \
@@ -15,9 +19,9 @@ RUN set -ex \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-FROM builder as build-galera
+FROM builder AS build-galera
 ARG TARGETARCH
-ARG VERSION=10.11.7
+ARG VERSION
 
 WORKDIR /opt/galera
 
@@ -40,15 +44,13 @@ RUN set -ex \
 RUN set -ex \
     && GALERA_VERSION=$(cat /opt/galera_version.txt) \
     && cd galera-${GALERA_VERSION} \
-    # https://github.com/codership/galera/issues/652
-    && sed -i "s@dh_auto_test @# dh_auto_test @g" debian/rules \
     && ./scripts/build.sh -p \
     && cd .. \
     && rm -rf galera-${GALERA_VERSION}
 
-FROM builder as build-mariadb
+FROM builder AS build-mariadb
 ARG TARGETARCH
-ARG VERSION=10.11.7
+ARG VERSION
 
 WORKDIR /opt/mariadb
 
@@ -70,7 +72,7 @@ RUN set -ex \
     && cd .. \
     && rm -rf mariadb-${VERSION}
 
-FROM debian:bookworm-slim
+FROM ${BASE_IMAGE}
 ARG TARGETARCH
 
 WORKDIR /opt/mariadb
