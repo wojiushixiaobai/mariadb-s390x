@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         DISTRO: [ 'debian' ]
-        SUITE: [ 'bookworm', 'trixie' ]
+        SUITE: [ 'bullseye', 'bookworm', 'trixie' ]
         VERSION: [ '10.6', '10.11', '11.5' ]
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -29,6 +29,27 @@ jobs:
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
+      - name: Cache
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: |
+            var-cache-apt
+            var-lib-apt
+            mariadb-ccache
+          key: cache-mariadb-${{ matrix.VERSION }}-${{ matrix.SUITE }}-${{ matrix.DISTRO }}
+
+      - name: inject cache into docker
+        uses: reproducible-containers/buildkit-cache-dance@v3.1.0
+        with:
+          cache-map: |
+            {
+              "var-cache-apt": "/var/cache/apt",
+              "var-lib-apt": "/var/lib/apt",
+              "mariadb-ccache": "/root/.cache/ccache"
+            }
+          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
+
       - name: Check Version
         run: |
           echo "Checking version..."
@@ -42,24 +63,47 @@ jobs:
         run: |
           gh release view ${{ env.VERSION }} -R ${{ github.repository }} >/dev/null 2>&1 || echo "create=1" >> $GITHUB_ENV
           case ${{ matrix.SUITE }} in
+            bullseye)
+              grep_pattern="mariadb-.*.deb11_s390x.deb"
+              ;;
             bookworm)
-              gh release view ${{ env.VERSION }} -R ${{ github.repository }} | grep mariadb-server_.*+maria.deb12_s390x.deb >/dev/null 2>&1 || echo "build=1" >> $GITHUB_ENV
+              grep_pattern="mariadb-.*.deb12_s390x.deb"
               ;;
             trixie)
-              gh release view ${{ env.VERSION }} -R ${{ github.repository }} | grep mariadb-server_.*.deb13_s390x.deb >/dev/null 2>&1 || echo "build=1" >> $GITHUB_ENV
+              grep_pattern="mariadb-.*.debsid_s390x.deb"
               ;;
             *)
-              gh release view ${{ env.VERSION }} -R ${{ github.repository }} | grep mariadb-server_.*.deb >/dev/null 2>&1 || echo "build=1" >> $GITHUB_ENV
-              exit 1
+              grep_pattern="mariadb-.*_s390x.deb"
               ;;
           esac
+          gh release view ${{ env.VERSION }} -R ${{ github.repository }} | grep $grep_pattern >/dev/null 2>&1 || echo "build=1" >> $GITHUB_ENV
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Image
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
         if: env.build == '1'
-        run: |
-          docker buildx build --platform linux/s390x --build-arg DISTRO=${{ matrix.DISTRO }} --build-arg SUITE=${{ matrix.SUITE }} --build-arg VERSION=${{ env.VERSION }} -t mariadb:${{ env.VERSION }} -f ${{ matrix.DISTRO }}/Dockerfile . --load
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.DISTRO }}/Dockerfile
+          platforms: linux/s390x
+          push: true
+          build-args: |
+            DISTRO=${{ matrix.DISTRO }}
+            SUITE=${{ matrix.SUITE }}
+            VERSION=${{ env.VERSION }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mariadb-buildcache-${{ matrix.DISTRO }}:${{ env.VERSION }}-${{ matrix.SUITE }}
+          outputs: type=image,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Create Tag
         if: env.create == '1'
@@ -84,7 +128,7 @@ jobs:
       - name: Upgrade Release
         if: env.build == '1'
         run: |
-          docker run --rm -v $(pwd)/dist:/dist mariadb:${{ env.VERSION }}
+          docker run --rm --platform linux/s390x -v $(pwd)/dist:/dist ghcr.io/${{ github.repository_owner }}/mariadb-buildcache-${{ matrix.DISTRO }}:${{ env.VERSION }}-${{ matrix.SUITE }}
           ls -al dist
           gh release upload ${{ env.VERSION }} -R ${{ github.repository }} dist/*
         env:

@@ -5,72 +5,80 @@ ARG BASE_IMAGE=${DISTRO}:${SUITE}-slim
 FROM ${BASE_IMAGE} AS builder
 ARG TARGETARCH
 
-ARG BUILD_DEPENDENCIES="           \
-        ca-certificates            \
-        curl                       \
+ARG DEPENDENCIES="                 \
         devscripts                 \
-        software-properties-common \
+        equivs                     \
+        software-properties-common"
+
+ARG TOOLS="                        \
+        ca-certificates            \
+        ccache                     \
+        curl                       \
         wget"
 
-RUN set -ex \
+ENV USE_CCACHE=1
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -ex \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
-    && apt-get install -y ${BUILD_DEPENDENCIES} \
-    && echo "no" | dpkg-reconfigure dash \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y ${DEPENDENCIES} \
+    && apt-get install -y --no-install-recommends ${TOOLS} \
+    && echo "no" | dpkg-reconfigure dash
 
-FROM builder AS build-galera
-ARG TARGETARCH
+WORKDIR /opt
+
 ARG VERSION
-
-WORKDIR /opt/galera
+ENV VERSION=${VERSION} \
+    PATH=/usr/lib/ccache:${PATH}
 
 RUN set -ex \
     && GALERA_VERSION=$(curl -s https://archive.mariadb.org/mariadb-${VERSION}/ | grep -oP 'galera-\K[^/]+(?=/)' | tail -n 1) \
-    && echo "${GALERA_VERSION}" > /opt/galera_version.txt
-
-RUN set -ex \
-    && GALERA_VERSION=$(cat /opt/galera_version.txt) \
+    && echo "${GALERA_VERSION}" > /opt/galera_version.txt \
     && wget -q https://archive.mariadb.org/mariadb-${VERSION}/galera-${GALERA_VERSION}/src/galera-${GALERA_VERSION}.tar.gz \
-    && tar -xf galera-${GALERA_VERSION}.tar.gz \
-    && rm -f galera-${GALERA_VERSION}.tar.gz
+    && wget -q http://archive.mariadb.org/mariadb-${VERSION}/source/mariadb-${VERSION}.tar.gz
 
-RUN set -ex \
-    && apt-get update \
+FROM builder AS build-galera
+
+WORKDIR /opt/galera
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
     && GALERA_VERSION=$(cat /opt/galera_version.txt) \
+    && tar -xf /opt/galera-${GALERA_VERSION}.tar.gz \
     && cd galera-${GALERA_VERSION} \
-    && mk-build-deps -t "apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y" -i debian/control
+    && mk-build-deps -t "apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y" -i debian/control \
+    && rm -f galera-*.deb galera-*.buildinfo galera-*.changes
 
-RUN set -ex \
-    && GALERA_VERSION=$(cat /opt/galera_version.txt) \
+RUN --mount=type=cache,target=/root/.cache/ccache,sharing=locked \
+    GALERA_VERSION=$(cat /opt/galera_version.txt) \
     && cd galera-${GALERA_VERSION} \
     && ./scripts/build.sh -p \
     && cd .. \
     && rm -rf galera-${GALERA_VERSION}
 
 FROM builder AS build-mariadb
-ARG TARGETARCH
-ARG VERSION
 
 WORKDIR /opt/mariadb
 
-RUN set -ex \
-    && wget -q http://archive.mariadb.org/mariadb-${VERSION}/source/mariadb-${VERSION}.tar.gz \
-    && tar -xf mariadb-${VERSION}.tar.gz \
-    && rm -f mariadb-${VERSION}.tar.gz
-
-RUN set -ex \
-    && apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+    && tar -xf /opt/mariadb-${VERSION}.tar.gz \
     && cd mariadb-${VERSION} \
     && AUTOBAKE_PREP_CONTROL_RULES_ONLY=true ./debian/autobake-deb.sh \
-    && mk-build-deps -t "apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y" -i debian/control
+    && mk-build-deps -t "apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y" -i debian/control \
+    && rm -f mariadb-*.deb mariadb-*.buildinfo mariadb-*.changes
 
-RUN set -ex \
-    && export DEB_BUILD_OPTIONS=parallel=$(nproc) \
+RUN --mount=type=cache,target=/root/.cache/ccache,sharing=locked \
+    export DEB_BUILD_OPTIONS=parallel=$(nproc) \
     && cd mariadb-${VERSION} \
     && ./debian/autobake-deb.sh \
     && cd .. \
-    && rm -rf mariadb-${VERSION}
+    && rm -rf mariadb-${VERSION} mariadb_*.xz mariadb_*.dsc
 
 FROM ${BASE_IMAGE}
 ARG TARGETARCH
