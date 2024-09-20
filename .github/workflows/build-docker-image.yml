@@ -29,26 +29,13 @@ jobs:
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
-      - name: Cache
+      - name: Cache Docker layers
         uses: actions/cache@v4
-        id: cache
         with:
-          path: |
-            var-cache-apt
-            var-lib-apt
-            mariadb-ccache
-          key: cache-mariadb-${{ matrix.VERSION }}-${{ matrix.SUITE }}-${{ matrix.DISTRO }}
-
-      - name: inject cache into docker
-        uses: reproducible-containers/buildkit-cache-dance@v3.1.0
-        with:
-          cache-map: |
-            {
-              "var-cache-apt": "/var/cache/apt",
-              "var-lib-apt": "/var/lib/apt",
-              "mariadb-ccache": "/root/.cache/ccache"
-            }
-          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
+          path: /tmp/.buildx-cache
+          key: ${{ matrix.DISTRO }}-${{ matrix.SUITE }}-${{ matrix.VERSION }}-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.DISTRO }}-${{ matrix.SUITE }}-${{ matrix.VERSION }}-
 
       - name: Check Version
         run: |
@@ -102,8 +89,13 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/mariadb-buildcache-${{ matrix.DISTRO }}:${{ env.VERSION }}-${{ matrix.SUITE }}
           outputs: type=image,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Create Tag
         if: env.create == '1'

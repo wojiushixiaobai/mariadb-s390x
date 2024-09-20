@@ -53,7 +53,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && mk-build-deps -t "apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y" -i debian/control \
     && rm -f galera-*.deb galera-*.buildinfo galera-*.changes
 
-RUN --mount=type=cache,target=/root/.cache/ccache,sharing=locked \
+RUN --mount=type=cache,target=/root/.cache/ccache \
     GALERA_VERSION=$(cat /opt/galera_version.txt) \
     && cd galera-${GALERA_VERSION} \
     && ./scripts/build.sh -p \
@@ -73,7 +73,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && mk-build-deps -t "apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y" -i debian/control \
     && rm -f mariadb-*.deb mariadb-*.buildinfo mariadb-*.changes
 
-RUN --mount=type=cache,target=/root/.cache/ccache,sharing=locked \
+RUN --mount=type=cache,target=/root/.cache/ccache \
     export DEB_BUILD_OPTIONS=parallel=$(nproc) \
     && cd mariadb-${VERSION} \
     && ./debian/autobake-deb.sh \
