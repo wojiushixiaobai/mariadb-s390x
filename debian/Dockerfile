@@ -7,8 +7,7 @@ ARG TARGETARCH
 
 ARG DEPENDENCIES="                 \
         devscripts                 \
-        equivs                     \
-        software-properties-common"
+        equivs"
 
 ARG TOOLS="                        \
         ca-certificates            \

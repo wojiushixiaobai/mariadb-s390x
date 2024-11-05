@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         DISTRO: [ 'debian' ]
-        SUITE: [ 'bullseye', 'bookworm', 'trixie' ]
-        VERSION: [ '10.6', '10.11', '11.5' ]
+        SUITE: [ 'bookworm', 'trixie' ]
+        VERSION: [ '10.6', '10.11', '11.4' ]
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -42,6 +42,10 @@ jobs:
           echo "Checking version..."
           wget https://github.com/MariaDB/mariadb-docker/raw/master/versions.json
           VERSION=$(jq -r '."${{ matrix.VERSION }}".version' versions.json)
+          if [ -z "$VERSION" ] || [ "$VERSION" == "null" ]; then
+            echo "Version not found"
+            exit 1
+          fi
 
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "Current version: ${VERSION}"
