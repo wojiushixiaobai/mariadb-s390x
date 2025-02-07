@@ -16,6 +16,7 @@ ARG TOOLS="                        \
         wget"
 
 ENV USE_CCACHE=1
+ENV DEB_BUILD_OPTIONS=nocheck
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
