@@ -1,0 +1,122 @@
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+parameters:
+- name: DISTRO
+  displayName: Linux Distribution
+  type: string
+  default: debian
+  values:
+  - debian
+
+- name: SUITE
+  displayName: Debian Suite
+  type: string
+  default: bookworm
+  values:
+  - bookworm
+  - trixie
+
+- name: VERSION
+  displayName: MariaDB Version
+  type: string
+  default: 10.6
+  values:
+  - 10.6
+  - 10.11
+  - 11.4
+
+trigger: none
+
+jobs:
+- job: build
+  pool:
+    vmImage: ubuntu-latest
+
+  variables:
+    imageName: ghcr.io/$(Build.Repository.Name)/mariadb-buildcache-${{ parameters.DISTRO }}
+    cacheKey: docker | "$(Agent.OS)" | ${{ parameters.DISTRO }}-${{ parameters.SUITE }}-${{ parameters.VERSION }}-$(Build.SourceVersion)
+
+  steps:
+  - checkout: self
+
+  - bash: |
+      echo "Checking version..."
+      wget https://github.com/MariaDB/mariadb-docker/raw/master/versions.json
+      VERSION=$(jq -r '."${{ parameters.VERSION }}".version' versions.json)
+      if [ -z "$VERSION" ] || [ "$VERSION" == "null" ]; then
+        echo "Version not found"
+        exit 1
+      fi
+      echo "##vso[task.setvariable variable=VERSION]$VERSION"
+      echo "Current version: ${VERSION}"
+    displayName: Check Version
+
+  - bash: |
+      # Install GitHub CLI
+      type -p gh >/dev/null || {
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+        sudo apt update && sudo apt install gh -y
+      }
+
+      gh release view $(VERSION) -R $(Build.Repository.Name) >/dev/null 2>&1 || echo "##vso[task.setvariable variable=create]1"
+      
+      case ${{ parameters.SUITE }} in
+        bullseye) grep_pattern="mariadb-.*.deb11_s390x.deb";;
+        bookworm) grep_pattern="mariadb-.*.deb12_s390x.deb";;
+        trixie)  grep_pattern="mariadb-.*.debsid_s390x.deb";;
+        *)       grep_pattern="mariadb-.*_s390x.deb";;
+      esac
+      
+      gh release view $(VERSION) -R $(Build.Repository.Name) | grep $grep_pattern >/dev/null 2>&1 || echo "##vso[task.setvariable variable=build]1"
+    env:
+      GITHUB_TOKEN: $(System.AccessToken)
+    displayName: Check Release
+
+  - task: Docker@2
+    displayName: Login to GitHub Container Registry
+    inputs:
+      command: login
+      containerRegistry: ghcr-connection
+
+  - task: Docker@2
+    displayName: Build and Push
+    condition: eq(variables['build'], '1')
+    inputs:
+      command: buildAndPush
+      repository: $(imageName)
+      dockerfile: ${{ parameters.DISTRO }}/Dockerfile
+      containerRegistry: ghcr-connection
+      tags: |
+        $(VERSION)-${{ parameters.SUITE }}
+      arguments: --platform linux/s390x --output type=image,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true
+      buildContext: .
+
+  - bash: |
+      git config --global user.name "$(Build.RequestedFor)"
+      git config --global user.email "$(Build.RequestedForEmail)"
+      echo $(date "+%Y%m%d") > serial
+      git add .
+      git commit -m "Release $(VERSION)" || true
+      git tag $(VERSION)
+      git push origin $(VERSION) || true
+    displayName: Create Tag
+    condition: eq(variables['create'], '1')
+    env:
+      GITHUB_TOKEN: $(System.AccessToken)
+
+  - bash: |
+      gh release create $(VERSION) -R $(Build.Repository.Name) --title $(VERSION) || true
+    displayName: Create Release
+    condition: eq(variables['create'], '1')
+    env:
+      GITHUB_TOKEN: $(System.AccessToken)
+
+  - bash: |
+      docker run --rm --platform linux/s390x -v $(pwd)/dist:/dist $(imageName):$(VERSION)-${{ parameters.SUITE }}
+      ls -al dist
+      gh release upload $(VERSION) -R $(Build.Repository.Name) dist/*
+    displayName: Upgrade Release
+    condition: eq(variables['build'], '1')
+    env:
+      GITHUB_TOKEN: $(System.AccessToken)
